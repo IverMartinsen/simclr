@@ -8,7 +8,7 @@ import wandb
 import tensorflow as tf
 from datetime import datetime
 from scampi_unsupervised.frameworks.simclr.simclr import ContrastiveModel, get_augmenter, get_encoder, get_projection_head, Augmenter
-from scampi_unsupervised.dataloader import get_tfrecord_dataset, get_tfrecord_benchmark_dataset, get_dataset_from_hdf5_old
+#from scampi_unsupervised.dataloader import get_tfrecord_dataset, get_tfrecord_benchmark_dataset, get_dataset_from_hdf5_old
 from scampi_unsupervised.tf_utils import LogisticRegressionCallback
 from scampi_evaluation.prepare_labelled_data import get_numpy_dataset
 
@@ -21,8 +21,18 @@ if __name__ == "__main__":
     parser.add_argument("--input_shape", type=int, nargs="+", default=[96, 96, 3])
     parser.add_argument("--temperature", type=float, default=0.1)
     
+    
+    path_to_files = "./data/NO 6407-6-5/100K_BENCHMARK_224x224/images/"
+    dataset = tf.data.Dataset.list_files(path_to_files + "*.png")
+    dataset = dataset.shuffle(parser.parse_args().buffer_size)
+    dataset = dataset.map(lambda x: tf.io.read_file(x))
+    dataset = dataset.map(lambda x: tf.image.decode_png(x, channels=3))
+    dataset = dataset.map(lambda x: tf.image.resize(x, parser.parse_args().input_shape[:2]))
+    dataset = dataset.batch(parser.parse_args().batch_size, drop_remainder=True)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+        
     #dataset = get_tfrecord_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size)
-    dataset = get_tfrecord_benchmark_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size, dataset_size=parser.parse_args().dataset_size)
+    #dataset = get_tfrecord_benchmark_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size, dataset_size=parser.parse_args().dataset_size)
     #dataset = get_dataset_from_hdf5_old(image_shape=parser.parse_args().input_shape, batch_size=parser.parse_args().batch_size, dataset_size=parser.parse_args().dataset_size)
     dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234)
     

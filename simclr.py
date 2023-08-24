@@ -165,30 +165,55 @@ class ContrastiveModel(tf.keras.Model):
         Compute the contrastive loss - NT-Xent loss (normalized temperature-scaled cross entropy) - for two sets of projections.
         Possibly equal to the InfoNCE loss (information noise-contrastive estimation) described elsewhere.
         """
+        
+        method = "complicated"
+        
         # Cosine similarity: the dot product of the l2-normalized feature vectors
         projections_1 = tf.math.l2_normalize(projections_1, axis=1)
         projections_2 = tf.math.l2_normalize(projections_2, axis=1)
-        similarities = (
-            tf.matmul(projections_1, projections_2, transpose_b=True) / self.temperature
-        )
+        
+        if method == "simple":
+            # Similaritites as in tutorial
+            similarities1 = (
+                tf.matmul(projections_1, projections_2, transpose_b=True) / self.temperature
+            )
+            similarities2 = tf.transpose(similarities1)
+        
+        elif method == "complicated":
+            # Similarities as in the paper
+            large_value = tf.eye(batch_size) * 1e9
+            sim_12 = (
+                tf.matmul(projections_1, projections_2, transpose_b=True) / self.temperature
+            )
+            sim_21 = (
+                tf.matmul(projections_2, projections_1, transpose_b=True) / self.temperature
+            )
+            sim_11 = (
+                tf.matmul(projections_1, projections_1, transpose_b=True) / self.temperature
+            ) - large_value
+            sim_22 = (
+                tf.matmul(projections_2, projections_2, transpose_b=True) / self.temperature
+            ) - large_value
+            similarities1 = tf.concat([sim_12, sim_11], axis=1)
+            similarities2 = tf.concat([sim_21, sim_22], axis=1)
+        else:
+            raise ValueError("method must be 'simple' or 'complicated'")
 
         # The similarity between the representations of two augmented views of the
         # same image should be higher than their similarity with other views
         batch_size = tf.shape(projections_1)[0]
         contrastive_labels = tf.range(batch_size)
-        self.contrastive_accuracy.update_state(contrastive_labels, similarities)
-        self.contrastive_accuracy.update_state(
-            contrastive_labels, tf.transpose(similarities)
-        )
-
+        self.contrastive_accuracy.update_state(contrastive_labels, similarities1)
+        self.contrastive_accuracy.update_state(contrastive_labels, similarities2)
         # The temperature-scaled similarities are used as logits for cross-entropy
         # a symmetrized version of the loss is used here
         loss_1_2 = tf.keras.losses.sparse_categorical_crossentropy(
-            contrastive_labels, similarities, from_logits=True
+            contrastive_labels, similarities1, from_logits=True
         )
         loss_2_1 = tf.keras.losses.sparse_categorical_crossentropy(
-            contrastive_labels, tf.transpose(similarities), from_logits=True
+            contrastive_labels, similarities2, from_logits=True
         )
+
         return (loss_1_2 + loss_2_1) / 2
 
     def train_step(self, images):
