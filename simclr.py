@@ -168,7 +168,7 @@ class ContrastiveModel(tf.keras.Model):
         Possibly equal to the InfoNCE loss (information noise-contrastive estimation) described elsewhere.
         """
         
-        method = "complicated"
+        method = "simple"
         
         batch_size = tf.shape(projections_1)[0]
         
