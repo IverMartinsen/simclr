@@ -5,6 +5,7 @@ from scampi_unsupervised.data_augmentation import (
     random_crop,
     random_jitter,
     random_color_drop,
+    ColorDrop,
 )
 
 rng = tf.random.Generator.from_seed(42)
@@ -69,6 +70,7 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
             tf.keras.layers.RandomTranslation(zoom_factor / 2, zoom_factor / 2),
             tf.keras.layers.RandomZoom((-zoom_factor, 0.0), (-zoom_factor, 0.0)),
             RandomColorAffine(brightness, jitter),
+            ColorDrop(p=0.2),
         ]
     )
 
@@ -168,6 +170,8 @@ class ContrastiveModel(tf.keras.Model):
         
         method = "complicated"
         
+        batch_size = tf.shape(projections_1)[0]
+        
         # Cosine similarity: the dot product of the l2-normalized feature vectors
         projections_1 = tf.math.l2_normalize(projections_1, axis=1)
         projections_2 = tf.math.l2_normalize(projections_2, axis=1)
@@ -201,7 +205,6 @@ class ContrastiveModel(tf.keras.Model):
 
         # The similarity between the representations of two augmented views of the
         # same image should be higher than their similarity with other views
-        batch_size = tf.shape(projections_1)[0]
         contrastive_labels = tf.range(batch_size)
         self.contrastive_accuracy.update_state(contrastive_labels, similarities1)
         self.contrastive_accuracy.update_state(contrastive_labels, similarities2)
