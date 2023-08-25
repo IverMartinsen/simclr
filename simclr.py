@@ -6,6 +6,7 @@ from scampi_unsupervised.data_augmentation import (
     random_jitter,
     random_color_drop,
     ColorDrop,
+    RandomBlur,
 )
 
 rng = tf.random.Generator.from_seed(42)
@@ -70,7 +71,8 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
             tf.keras.layers.RandomTranslation(zoom_factor / 2, zoom_factor / 2),
             tf.keras.layers.RandomZoom((-zoom_factor, 0.0), (-zoom_factor, 0.0)),
             RandomColorAffine(brightness, jitter),
-            ColorDrop(p=0.2),
+            #ColorDrop(p=0.2),
+            RandomBlur(p=0.5),
         ]
     )
 
