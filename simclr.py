@@ -1,4 +1,4 @@
-# The SimCLR class implementation is mostly copied from the tutorial in https://keras.io/examples/vision/semisupervised_simclr/
+# The SimCLR class implementation is based on the tutorial in https://keras.io/examples/vision/semisupervised_simclr/
 import tensorflow as tf
 import math
 from scampi_unsupervised.data_augmentation import (
@@ -71,7 +71,7 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
             tf.keras.layers.RandomTranslation(zoom_factor / 2, zoom_factor / 2),
             tf.keras.layers.RandomZoom((-zoom_factor, 0.0), (-zoom_factor, 0.0)),
             RandomColorAffine(brightness, jitter),
-            #ColorDrop(p=0.2),
+            ColorDrop(p=0.2),
             RandomBlur(p=0.5),
         ]
     )
@@ -120,10 +120,11 @@ class RandomColorAffine(tf.keras.layers.Layer):
 class ContrastiveModel(tf.keras.Model):
     """TensorFlow SimCLR model for contrastive learning."""
 
-    def __init__(self, augmenter, encoder, projection_head, temperature=0.1, **kwargs):
+    def __init__(self, augmenter, encoder, projection_head, temperature=0.1, loss_implementation="simple", **kwargs):
         super().__init__(name="simclr", **kwargs)
         # === Hyperparameters ===
         self.temperature = temperature
+        self.loss_implementation = loss_implementation
         # === Architecture ===
         self.augmenter = augmenter
         self.encoder = encoder
@@ -170,22 +171,20 @@ class ContrastiveModel(tf.keras.Model):
         Possibly equal to the InfoNCE loss (information noise-contrastive estimation) described elsewhere.
         """
         
-        method = "simple"
-        
         batch_size = tf.shape(projections_1)[0]
         
         # Cosine similarity: the dot product of the l2-normalized feature vectors
         projections_1 = tf.math.l2_normalize(projections_1, axis=1)
         projections_2 = tf.math.l2_normalize(projections_2, axis=1)
         
-        if method == "simple":
+        if self.loss_implementation == "simple":
             # Similaritites as in tutorial
             similarities1 = (
                 tf.matmul(projections_1, projections_2, transpose_b=True) / self.temperature
             )
             similarities2 = tf.transpose(similarities1)
         
-        elif method == "complicated":
+        elif self.loss_implementation == "complicated":
             # Similarities as in the paper
             large_value = tf.eye(batch_size) * 1e9
             sim_12 = (

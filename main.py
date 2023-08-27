@@ -20,10 +20,10 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_size", type=int, default=200000)
     parser.add_argument("--input_shape", type=int, nargs="+", default=[96, 96, 3])
     parser.add_argument("--temperature", type=float, default=0.1)
+    parser.add_argument("--loss_implementation", type=str, default="simple")
+    parser.add_argument("--path_to_files", type=str, default="./data/NO 6407-6-5/100K_BENCHMARK_224x224/images/")
     
-    
-    path_to_files = "./data/NO 6407-6-5/100K_BENCHMARK_224x224/images/"
-    dataset = tf.data.Dataset.list_files(path_to_files + "*.png")
+    dataset = tf.data.Dataset.list_files(parser.parse_args().path_to_files + "*.png")
     dataset = dataset.shuffle(parser.parse_args().buffer_size)
     dataset = dataset.map(lambda x: tf.io.read_file(x))
     dataset = dataset.map(lambda x: tf.image.decode_png(x, channels=3))
@@ -47,6 +47,7 @@ if __name__ == "__main__":
         encoder = tf.keras.applications.Xception(include_top=False, pooling="avg", input_shape=parser.parse_args().input_shape, weights=None), 
         projection_head = get_projection_head(width=128, input_shape=(2048, )),
         temperature = parser.parse_args().temperature,
+        loss_implementation = parser.parse_args().loss_implementation,
     )
     
     optimizer = tf.keras.optimizers.Adam()
@@ -56,6 +57,9 @@ if __name__ == "__main__":
     callbacks = []
     callbacks.append(wandb.keras.WandbCallback(save_model=False))
     callbacks.append(LogisticRegressionCallback(dataset_labelled, log_freq=5))
+    
+    print("Augmenter summary:")
+    model.augmenter.summary()
     
     history = model.fit(
         dataset, 
