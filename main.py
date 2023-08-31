@@ -50,7 +50,13 @@ if __name__ == "__main__":
         loss_implementation = parser.parse_args().loss_implementation,
     )
     
-    optimizer = tf.keras.optimizers.Adam()
+    schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
+        initial_learning_rate=1e-3,
+        decay_steps=parser.parse_args().dataset_size // parser.parse_args().batch_size,
+        decay_rate=0.05,
+        staircase=True)
+
+    optimizer = tf.keras.optimizers.Adam(schedule)
     
     model.compile(optimizer=optimizer, probe_optimizer=None)
 
