@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--buffer_size", type=int, default=100000)
     parser.add_argument("--dataset_size", type=int, default=200000)
-    parser.add_argument("--input_shape", type=int, nargs="+", default=[96, 96, 3])
+    parser.add_argument("--input_shape", type=int, nargs="+", default=[224, 224, 3])
     parser.add_argument("--temperature", type=float, default=0.1)
     parser.add_argument("--loss_implementation", type=str, default="simple")
     parser.add_argument("--path_to_files", type=str, default="./data/NO 6407-6-5/100K_BENCHMARK_224x224/images/")
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #dataset = get_tfrecord_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size)
     #dataset = get_tfrecord_benchmark_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size, dataset_size=parser.parse_args().dataset_size)
     #dataset = get_dataset_from_hdf5_old(image_shape=parser.parse_args().input_shape, batch_size=parser.parse_args().batch_size, dataset_size=parser.parse_args().dataset_size)
-    dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234)
+    dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234, img_shape=parser.parse_args().input_shape)
     
     timestr = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     callbacks = []
     callbacks.append(wandb.keras.WandbCallback(save_model=False))
-    callbacks.append(LogisticRegressionCallback(dataset_labelled, log_freq=5))
+    #callbacks.append(LogisticRegressionCallback(dataset_labelled, log_freq=5))
     
     print("Augmenter summary:")
     model.augmenter.summary()
