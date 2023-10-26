@@ -1,1 +1,1 @@
-# A TensorFlow implementation of SimCLRv1
+# A TensorFlow implementation of SimCLR
