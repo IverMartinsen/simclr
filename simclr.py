@@ -38,29 +38,6 @@ def get_encoder(width, input_shape):
     )
 
 
-class Augmenter(tf.keras.layers.Layer):
-    def __init__(self, input_size, batch_size, **kwargs):
-        super().__init__(**kwargs)
-        self.input_size = input_size
-        self.batch_size = batch_size
-
-    def call(self, x, training=True):
-        # rescale
-        x = tf.cast(x, tf.float32) / 255.0
-        if training:
-            x = random_crop(
-                x,
-                min_area=0.25,
-                height=self.input_size[0],
-                width=self.input_size[1],
-                batch_size=self.batch_size,
-            )
-            x = tf.image.random_flip_left_right(x)
-            x = random_jitter(x, p=0.8, s=1.0)
-            x = random_color_drop(x, p=0.2)
-        return x
-
-
 def get_augmenter(input_shape, min_area, brightness, jitter):
     zoom_factor = 1.0 - math.sqrt(min_area)
     return tf.keras.Sequential(

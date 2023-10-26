@@ -7,7 +7,7 @@ import argparse
 import wandb
 import tensorflow as tf
 from datetime import datetime
-from scampi_unsupervised.frameworks.simclr.simclr import ContrastiveModel, get_augmenter, get_encoder, get_projection_head, Augmenter
+from scampi_unsupervised.frameworks.simclr.simclr import ContrastiveModel, get_augmenter, get_encoder, get_projection_head
 #from scampi_unsupervised.dataloader import get_tfrecord_dataset, get_tfrecord_benchmark_dataset, get_dataset_from_hdf5_old
 from scampi_unsupervised.tf_utils import LogisticRegressionCallback
 from scampi_evaluation.prepare_labelled_data import get_numpy_dataset
