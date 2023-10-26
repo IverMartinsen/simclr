@@ -1,7 +1,7 @@
 # The SimCLR class implementation is based on the tutorial in https://keras.io/examples/vision/semisupervised_simclr/
 import tensorflow as tf
 import math
-from transforms import ColorDrop, RandomBlur
+from transforms import ColorDrop, RandomBlur, RandomColorAffine
 
 
 rng = tf.random.Generator.from_seed(42)
@@ -47,46 +47,6 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
             RandomBlur(p=0.5, kernel_size=21),
         ]
     )
-
-
-
-class RandomColorAffine(tf.keras.layers.Layer):
-    """
-    Random color affine transformations as in Keras tutorial
-    """
-
-    def __init__(self, brightness=0, jitter=0, **kwargs):
-        super().__init__(**kwargs)
-
-        self.brightness = brightness
-        self.jitter = jitter
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({"brightness": self.brightness, "jitter": self.jitter})
-        return config
-
-    def call(self, images, training=True):
-        if training:
-            batch_size = tf.shape(images)[0]
-            # Same for all colors
-            brightness_scales = 1 + rng.uniform(
-                (batch_size, 1, 1, 1), minval=-self.brightness, maxval=self.brightness
-            )
-            # Different for all colors
-            jitter_matrices = rng.uniform(
-                (batch_size, 1, 3, 3), minval=-self.jitter, maxval=self.jitter
-            )
-            # Combine brightness and jitter
-            color_transforms = (
-                tf.eye(3, batch_shape=[batch_size, 1]) * brightness_scales
-                + jitter_matrices
-            )
-            # cast to input type
-            color_transforms = tf.cast(color_transforms, images.dtype)
-            # Apply all color transformations
-            images = tf.clip_by_value(tf.matmul(images, color_transforms), 0, 1)
-        return images
 
 
 class ContrastiveModel(tf.keras.Model):
