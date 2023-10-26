@@ -9,8 +9,11 @@ import tensorflow as tf
 from datetime import datetime
 from simclr import ContrastiveModel, get_augmenter, get_encoder, get_projection_head
 #from scampi_unsupervised.dataloader import get_tfrecord_dataset, get_tfrecord_benchmark_dataset, get_dataset_from_hdf5_old
-from scampi_unsupervised.tf_utils import LogisticRegressionCallback
-from scampi_evaluation.prepare_labelled_data import get_numpy_dataset
+#from scampi_unsupervised.tf_utils import LogisticRegressionCallback
+#from scampi_evaluation.prepare_labelled_data import get_numpy_dataset
+
+# check if GPU is available
+print("GPU is", "available" if tf.config.list_physical_devices("GPU") else "NOT AVAILABLE")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -34,7 +37,7 @@ if __name__ == "__main__":
     #dataset = get_tfrecord_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size)
     #dataset = get_tfrecord_benchmark_dataset(batch_size=parser.parse_args().batch_size, buffer_size=parser.parse_args().buffer_size, dataset_size=parser.parse_args().dataset_size)
     #dataset = get_dataset_from_hdf5_old(image_shape=parser.parse_args().input_shape, batch_size=parser.parse_args().batch_size, dataset_size=parser.parse_args().dataset_size)
-    dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234, img_shape=parser.parse_args().input_shape)
+    #dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234, img_shape=parser.parse_args().input_shape)
     
     timestr = datetime.now().strftime("%Y%m%d_%H%M%S")
     
