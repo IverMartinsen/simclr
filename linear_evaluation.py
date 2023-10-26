@@ -20,7 +20,6 @@ from sklearn.metrics import (
 )
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils import compute_class_weight
-from scampi_unsupervised.models import add_rescaling_layer
 from scampi_evaluation.prepare_labelled_data import get_numpy_dataset, get_dataset_stats
 
 if __name__ == "__main__":
@@ -60,7 +59,8 @@ if __name__ == "__main__":
         pooling="avg", 
         input_shape=parser.parse_args().image_shape, 
         )
-    model = add_rescaling_layer(encoder)
+    
+    model = tf.keras.Sequential([tf.keras.layers.experimental.preprocessing.Rescaling(1.0 / 255.0), encoder])
 
     model_id = args.pretrained_weights.split(".")[0]
     

@@ -1,13 +1,8 @@
 # The SimCLR class implementation is based on the tutorial in https://keras.io/examples/vision/semisupervised_simclr/
 import tensorflow as tf
 import math
-from scampi_unsupervised.data_augmentation import (
-    random_crop,
-    random_jitter,
-    random_color_drop,
-    ColorDrop,
-    RandomBlur,
-)
+from transforms import ColorDrop, RandomBlur
+
 
 rng = tf.random.Generator.from_seed(42)
 
