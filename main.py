@@ -12,9 +12,6 @@ from simclr import ContrastiveModel, get_augmenter, get_encoder, get_projection_
 #from scampi_unsupervised.tf_utils import LogisticRegressionCallback
 #from scampi_evaluation.prepare_labelled_data import get_numpy_dataset
 
-# check if GPU is available
-print("GPU is", "available" if tf.config.list_physical_devices("GPU") else "NOT AVAILABLE")
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--epochs", type=int, default=100)
