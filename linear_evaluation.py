@@ -27,6 +27,7 @@ if __name__ == "__main__":
     parser.add_argument('--image_shape', type=int, nargs="+", default=[224, 224, 3])
     parser.add_argument('--seed', type=int, default=1234)
     parser.add_argument('--path_to_imagefolder', type=str, default="", help='path to imagefolder of labeled data')
+    parser.add_argument('--destination', type=str, default="", help='path to save the results')
     args = parser.parse_args()
     
     print("Loading data...")
@@ -54,10 +55,10 @@ if __name__ == "__main__":
     
     model = tf.keras.Sequential([tf.keras.layers.experimental.preprocessing.Rescaling(1.0 / 255.0), encoder])
 
-    model_id = args.pretrained_weights.split(".")[0]
+    #model_id = args.pretrained_weights.split(".")[0]
     
-    destination = os.path.join("trained models", model_id)
-    os.makedirs(destination, exist_ok=True)
+    #destination = os.path.join("trained models", model_id)
+    os.makedirs(args.destination, exist_ok=True)
     
     print("Extracting features...")
 
@@ -96,7 +97,7 @@ if __name__ == "__main__":
     table["precision"] = precision_score(y_te, y_pred, average=None)
     table["recall"] = recall_score(y_te, y_pred, average=None)
     table["f1"] = f1_score(y_te, y_pred, average=None)
-    table.to_csv(os.path.join(destination, "table_logistic.csv"))
+    table.to_csv(os.path.join(args.destination, "table_logistic.csv"))
 
     # fit a knn model for each k
     for k in range(1, 10, 2):
@@ -116,6 +117,6 @@ if __name__ == "__main__":
         table["precision"] = precision_score(y_te, y_pred, average=None)
         table["recall"] = recall_score(y_te, y_pred, average=None)
         table["f1"] = f1_score(y_te, y_pred, average=None)
-        table.to_csv(os.path.join(destination, f"table_k{k}.csv"))
+        table.to_csv(os.path.join(args.destination, f"table_k{k}.csv"))
     
-    summary_table.to_csv(os.path.join(destination, "summary_table.csv"))
+    summary_table.to_csv(os.path.join(args.destination, "summary_table.csv"))
