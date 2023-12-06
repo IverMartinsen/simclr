@@ -3,7 +3,7 @@ wandb/
 jobfile.yml
 *.h5
 simclr_20230825_143247_encoder/
-trained_models/
+trained models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
