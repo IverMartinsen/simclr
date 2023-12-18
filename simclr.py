@@ -38,7 +38,6 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
     return tf.keras.Sequential(
         [
             tf.keras.Input(shape=input_shape),
-            #tf.keras.layers.Rescaling(1 / 255),
             tf.keras.layers.RandomFlip("horizontal"),
             tf.keras.layers.RandomTranslation(zoom_factor / 2, zoom_factor / 2),
             tf.keras.layers.RandomZoom((-zoom_factor, 0.0), (-zoom_factor, 0.0)),

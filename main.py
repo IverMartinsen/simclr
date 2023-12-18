@@ -46,11 +46,12 @@ if __name__ == "__main__":
     
     dataset = tf.data.TFRecordDataset(glob.glob(args.path_to_files + "*.tfrecords"))
     dataset = dataset.shuffle(args.buffer_size)
+    dataset = dataset.repeat()
     dataset = dataset.map(_tfrecord_map_function)
     dataset = dataset.map(lambda x: tf.image.resize(x, args.input_shape[:2]))
     dataset = dataset.map(lambda x: x / 255.0)
     dataset = dataset.batch(args.batch_size, drop_remainder=True)
-    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+    #dataset = dataset.prefetch(2)
     #dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234, img_shape=args.input_shape)
     
     timestr = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -87,7 +88,7 @@ if __name__ == "__main__":
     history = model.fit(
         dataset, 
         epochs=args.epochs,
-        steps_per_epoch=None,
+        steps_per_epoch=args.dataset_size // args.batch_size,
         validation_data=None,
         callbacks=callbacks,
         )
