@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Any
 
 sys.path.append(os.getcwd())
 
@@ -46,17 +47,18 @@ if __name__ == "__main__":
     
     dataset = tf.data.TFRecordDataset(glob.glob(args.path_to_files + "*.tfrecords"))
     dataset = dataset.shuffle(args.buffer_size)
-    dataset = dataset.repeat()
     dataset = dataset.map(_tfrecord_map_function)
     dataset = dataset.map(lambda x: tf.image.resize(x, args.input_shape[:2]))
     dataset = dataset.map(lambda x: x / 255.0)
     dataset = dataset.batch(args.batch_size, drop_remainder=True)
-    #dataset = dataset.prefetch(2)
-    #dataset_labelled = get_numpy_dataset(num_classes=10, splits=[0.8, 0.2], seed=1234, img_shape=args.input_shape)
     
     timestr = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     train_id = "simclr_" + timestr
+    
+    destination_folder = "./scampi_unsupervised/frameworks/simclr/" + train_id + "/"
+    
+    os.makedirs(destination_folder, exist_ok=True)
     
     wandb.init(project="scampi", name=train_id, config=vars(args))
     
@@ -78,9 +80,22 @@ if __name__ == "__main__":
     
     model.compile(optimizer=optimizer, probe_optimizer=None)
 
+
+    class SaveModelCallback(tf.keras.callbacks.Callback):
+        def __init__(self, log_freq, folder):
+            super(SaveModelCallback, self).__init__()
+
+            self.log_freq = log_freq
+            self.folder = folder
+            
+        def on_epoch_end(self, epoch, logs=None):
+            if epoch % self.log_freq == 0:
+                self.model.encoder.save_weights(self.folder + "checkpoint" + f"{epoch:02d}.h5")
+
+    
     callbacks = []
     callbacks.append(wandb.keras.WandbCallback(save_model=False))
-    #callbacks.append(LogisticRegressionCallback(dataset_labelled, log_freq=5))
+    callbacks.append(SaveModelCallback(log_freq=10, folder=destination_folder))
     
     print("Augmenter summary:")
     model.augmenter.summary()
@@ -88,9 +103,9 @@ if __name__ == "__main__":
     history = model.fit(
         dataset, 
         epochs=args.epochs,
-        steps_per_epoch=args.dataset_size // args.batch_size,
+        steps_per_epoch=None,
         validation_data=None,
         callbacks=callbacks,
         )
     
-    model.encoder.save_weights("./scampi_unsupervised/frameworks/simclr/" + train_id + "_encoder.h5")
+    model.encoder.save_weights(destination_folder + "encoder.h5")
