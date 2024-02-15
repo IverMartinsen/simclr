@@ -60,6 +60,11 @@ if __name__ == "__main__":
     
     os.makedirs(destination_folder, exist_ok=True)
     
+    # save the arguments
+    with open(destination_folder + "args.txt", "w") as f:
+        for arg in vars(args):
+            f.write(f"{arg}: {getattr(args, arg)}\n")
+    
     wandb.init(project="scampi", name=train_id, config=vars(args))
     
     model = ContrastiveModel(

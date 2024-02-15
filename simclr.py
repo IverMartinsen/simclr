@@ -45,7 +45,7 @@ def get_augmenter(input_shape, min_area, brightness, jitter):
             tf.keras.layers.RandomZoom((-zoom_factor, 0.0), (-zoom_factor, 0.0)),
             RandomColorAffine(brightness, jitter),
             #ColorDrop(p=0.2),
-            RandomBlur(p=0.5, kernel_size=21),
+            RandomBlur(p=0.5, kernel_size=9),
         ]
     )
 
