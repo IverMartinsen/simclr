@@ -18,7 +18,7 @@ from sklearn.metrics import (
     f1_score,
 )
 from sklearn.linear_model import LogisticRegression
-from sklearn.utils import compute_class_weight
+from sklearn.model_selection import train_test_split
 
 if __name__ == "__main__":
 
@@ -31,15 +31,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     print("Loading data...")
-
-    ds_train = tf.keras.preprocessing.image_dataset_from_directory(
-        os.path.join(args.path_to_imagefolder, "train"),
-        image_size=args.image_shape[:2],
-        shuffle=False,
-    )
     
-    ds_val = tf.keras.preprocessing.image_dataset_from_directory(
-        os.path.join(args.path_to_imagefolder, "val"),
+    ds = tf.keras.preprocessing.image_dataset_from_directory(
+        args.path_to_imagefolder,
         image_size=args.image_shape[:2],
         shuffle=False,
     )
@@ -54,69 +48,55 @@ if __name__ == "__main__":
         )
     
     model = tf.keras.Sequential([tf.keras.layers.experimental.preprocessing.Rescaling(1.0 / 255.0), encoder])
-
-    #model_id = args.pretrained_weights.split(".")[0]
     
-    #destination = os.path.join("trained models", model_id)
     os.makedirs(args.destination, exist_ok=True)
     
     print("Extracting features...")
-
-    X_tr = model.predict(ds_train)
-    y_tr = np.concatenate([y for x, y in ds_train], axis=0)
-    X_te = model.predict(ds_val)
-    y_te = np.concatenate([y for x, y in ds_val], axis=0)
     
-    class_names = ds_train.class_names
+    X = model.predict(ds)
+    y = np.concatenate([y for x, y in ds], axis=0)
     
-    print("Linear evaluation...")
-
-    summary_table = pd.DataFrame()
-
-    log_model = LogisticRegression(
-        random_state=parser.parse_args().seed,
-        max_iter=10000,
-        multi_class="multinomial",
-        class_weight="balanced",
-    )
+    class_names = ds.class_names
     
-    log_model.fit(X_tr, y_tr)
-    
-    class_weights = compute_class_weight("balanced", classes=np.unique(y_tr), y=np.concatenate([y_tr, y_te]))
-    
-    # compute summary metrics on the test set
-    y_pred = log_model.predict(X_te)
-    summary_table.loc["logistic", "log_loss"] = log_loss(y_te, log_model.predict_proba(X_te))
-    summary_table.loc["logistic", "balanced_accuracy"] = balanced_accuracy_score(y_te, y_pred)
-    summary_table.loc["logistic", "accuracy"] = accuracy_score(y_te, y_pred)
-    summary_table.loc["logistic", "mean_precision"] = precision_score(y_te, y_pred, average="macro")
+    summary_tables = [pd.DataFrame() for _ in range(10)]
 
-    # add the metrics to the table
-    table = pd.DataFrame()
-    table["class"] = class_names
-    table["precision"] = precision_score(y_te, y_pred, average=None)
-    table["recall"] = recall_score(y_te, y_pred, average=None)
-    table["f1"] = f1_score(y_te, y_pred, average=None)
-    table.to_csv(os.path.join(args.destination, "table_logistic.csv"))
+    for seed in range(10):
+        print(f"Evaluating seed {seed}...")
+        # create a train and test split
+        train_idx, test_idx = train_test_split(np.arange(len(y)), test_size=0.2, stratify=y, random_state=seed)
 
-    # fit a knn model for each k
-    for k in range(1, 10, 2):
+        X_tr, X_te = X[train_idx], X[test_idx]
+        y_tr, y_te = y[train_idx], y[test_idx]
         
-        knn = KNeighborsClassifier(n_neighbors=k, p=2)
-        knn.fit(X_tr, y_tr)
-        y_pred = knn.predict(X_te)
-        
-        # compute the accuracy and balanced accuracy and mean precision on the test set
-        summary_table.loc[f"k={k}", "balanced_accuracy"] = balanced_accuracy_score(y_te, y_pred)
-        summary_table.loc[f"k={k}", "accuracy"] = accuracy_score(y_te, y_pred)
-        summary_table.loc[f"k={k}", "mean_precision"] = precision_score(y_te, y_pred, average="macro")
-
-        # add the metrics to the table
-        table = pd.DataFrame()
-        table["class"] = class_names
-        table["precision"] = precision_score(y_te, y_pred, average=None)
-        table["recall"] = recall_score(y_te, y_pred, average=None)
-        table["f1"] = f1_score(y_te, y_pred, average=None)
-        table.to_csv(os.path.join(args.destination, f"table_k{k}.csv"))
+        log_model = LogisticRegression(
+            random_state=seed,
+            max_iter=10000,
+            multi_class="multinomial",
+            class_weight="balanced",
+        )
     
-    summary_table.to_csv(os.path.join(args.destination, "summary_table.csv"))
+        log_model.fit(X_tr, y_tr)
+        
+        y_pred = log_model.predict(X_te)
+        
+        summary_tables[seed].loc["logistic", "log_loss"] = log_loss(y_te, log_model.predict_proba(X_te))
+        summary_tables[seed].loc["logistic", "balanced_accuracy"] = balanced_accuracy_score(y_te, y_pred)
+        summary_tables[seed].loc["logistic", "accuracy"] = accuracy_score(y_te, y_pred)
+        summary_tables[seed].loc["logistic", "mean_precision"] = precision_score(y_te, y_pred, average="macro")
+        
+        # fit a knn model for each k
+        for k in range(1, 10, 2):
+            
+            knn = KNeighborsClassifier(n_neighbors=k, p=2)
+            knn.fit(X_tr, y_tr)
+            y_pred = knn.predict(X_te)
+            
+            # compute the accuracy and balanced accuracy and mean precision on the test set
+            summary_tables[seed].loc[f"k={k}", "balanced_accuracy"] = balanced_accuracy_score(y_te, y_pred)
+            summary_tables[seed].loc[f"k={k}", "accuracy"] = accuracy_score(y_te, y_pred)
+            summary_tables[seed].loc[f"k={k}", "mean_precision"] = precision_score(y_te, y_pred, average="macro")
+                
+    mean_summary_table = pd.concat(summary_tables).groupby(level=0).mean()
+    mean_summary_table.to_csv(os.path.join(args.destination, "mean_summary_table.csv"))
+    for i, summary_table in enumerate(summary_tables):
+        summary_table.to_csv(os.path.join(args.destination, f"summary_table_seed{i}.csv"))
