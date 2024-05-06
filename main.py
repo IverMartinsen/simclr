@@ -36,14 +36,21 @@ if __name__ == "__main__":
     #dataset = dataset.batch(args.batch_size, drop_remainder=True)
     #dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
+    print(f"GPUs available: {len(tf.config.list_physical_devices('GPU') )}")
+    for gpu in tf.config.list_physical_devices('GPU'):
+        print(f"Name: {gpu}, Type: {gpu.device_type}")
+    
     def _tfrecord_map_function(x):
         """Parse a single image from a tfrecord file."""
         # Dict with key 'image' and value of type string
         x = tf.io.parse_single_example(x, {"image": tf.io.FixedLenFeature([], tf.string)})
         # Tensor of type uint8
         x = tf.io.parse_tensor(x["image"], out_type=tf.uint8)
-        x = tf.ensure_shape(x, [224, 224, 3])
+        x = tf.ensure_shape(x, [96, 96, 3])
         return x
+    
+    print(f"Currently in directory: {os.getcwd()}")
+    print(f"Found {len(glob.glob(args.path_to_files + '*.tfrecords'))} tfrecords files.")
     
     dataset = tf.data.TFRecordDataset(glob.glob(args.path_to_files + "*.tfrecords"))
     dataset = dataset.shuffle(args.buffer_size)
