@@ -5,6 +5,7 @@ jobfile.yml
 simclr_20230825_143247_encoder/
 trained models/
 lumi_jobfile.sh
+*.SIF
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
