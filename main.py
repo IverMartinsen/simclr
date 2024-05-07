@@ -58,6 +58,7 @@ if __name__ == "__main__":
     dataset = dataset.map(lambda x: tf.image.resize(x, args.input_shape[:2]))
     dataset = dataset.map(lambda x: x / 255.0)
     dataset = dataset.batch(args.batch_size, drop_remainder=True)
+    dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
     timestr = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -74,14 +75,6 @@ if __name__ == "__main__":
     
     wandb.init(project="scampi", name=train_id, config=vars(args))
     
-    model = ContrastiveModel(
-        augmenter = get_augmenter(input_shape=args.input_shape, min_area=0.25, brightness=0.6, jitter=0.2),
-        encoder = tf.keras.applications.Xception(include_top=False, pooling="avg", input_shape=args.input_shape, weights=None), 
-        projection_head = get_projection_head(width=128, input_shape=(2048, )),
-        temperature = args.temperature,
-        loss_implementation = args.loss_implementation,
-    )
-    
     schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
         initial_learning_rate=1e-3,
         decay_steps=args.dataset_size // args.batch_size,
@@ -90,9 +83,6 @@ if __name__ == "__main__":
 
     optimizer = tf.keras.optimizers.Adam(schedule)
     
-    model.compile(optimizer=optimizer, probe_optimizer=None)
-
-
     class SaveModelCallback(tf.keras.callbacks.Callback):
         def __init__(self, log_freq, folder):
             super(SaveModelCallback, self).__init__()
@@ -108,6 +98,26 @@ if __name__ == "__main__":
     callbacks = []
     callbacks.append(wandb.keras.WandbCallback(save_model=False))
     callbacks.append(SaveModelCallback(log_freq=10, folder=destination_folder))
+    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=destination_folder))
+    
+    # Create a MirroredStrategy.
+    strategy = tf.distribute.MirroredStrategy()
+    print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
+
+    # Open a strategy scope.
+    with strategy.scope():
+    # Everything that creates variables should be under the strategy scope.
+    # In general this is only model construction & `compile()`.
+    
+        model = ContrastiveModel(
+            augmenter = get_augmenter(input_shape=args.input_shape, min_area=0.25, brightness=0.6, jitter=0.2),
+            encoder = tf.keras.applications.Xception(include_top=False, pooling="avg", input_shape=args.input_shape, weights=None), 
+            projection_head = get_projection_head(width=128, input_shape=(2048, )),
+            temperature = args.temperature,
+            loss_implementation = args.loss_implementation,
+        )
+        
+        model.compile(optimizer=optimizer, probe_optimizer=None)
     
     print("Augmenter summary:")
     model.augmenter.summary()
