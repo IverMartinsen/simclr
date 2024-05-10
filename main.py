@@ -93,8 +93,7 @@ if __name__ == "__main__":
     # Everything that creates variables should be under the strategy scope.
     # In general this is only model construction & `compile()`.
         from simclr import ContrastiveModel, get_augmenter, get_projection_head
-        from transforms import RandomColorAffine, RandomBlur
-        from random_crop import RandomCrop  
+        from transforms import RandomColorAffine, RandomBlur, RandomCrop
 
         schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
             initial_learning_rate=1e-3 * args.batch_size / 128,
