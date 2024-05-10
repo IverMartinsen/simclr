@@ -7,6 +7,8 @@ import argparse
 import glob
 import json
 import tensorflow as tf
+from simclr import ContrastiveModel, get_projection_head
+from transforms import RandomColorAffine, RandomBlur, RandomCrop
 
 
 if __name__ == "__main__":
@@ -45,13 +47,13 @@ if __name__ == "__main__":
         x = tf.io.parse_single_example(x, {"image": tf.io.FixedLenFeature([], tf.string)})
         x = tf.io.decode_jpeg(x["image"], channels=3)
         x = tf.ensure_shape(x, [224, 224, 3]) # a hack to set the shape attribute
+        x = tf.image.resize(x, args.input_shape[:2])
+        x = x / 255.0
         return x
     
     dataset = tf.data.TFRecordDataset(files, num_parallel_reads=tf.data.experimental.AUTOTUNE)
     dataset = dataset.shuffle(args.buffer_size)
     dataset = dataset.map(_tfrecord_map_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.map(lambda x: tf.image.resize(x, args.input_shape[:2]))
-    dataset = dataset.map(lambda x: x / 255.0)
     dataset = dataset.batch(args.batch_size, drop_remainder=True)
     dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
     
@@ -63,8 +65,6 @@ if __name__ == "__main__":
     with open(destination_folder + "args.txt", "w") as f:
         for arg in vars(args):
             f.write(f"{arg}: {getattr(args, arg)}\n")
-    
-    #wandb.init(project="scampi", name=train_id, config=vars(args))
         
     class SaveModelCallback(tf.keras.callbacks.Callback):
         def __init__(self, log_freq, folder):
@@ -75,28 +75,20 @@ if __name__ == "__main__":
             
         def on_epoch_end(self, epoch, logs=None):
             if epoch % self.log_freq == 0:
-                self.model.encoder.save_weights(self.folder + "checkpoint" + f"{epoch:02d}.h5")
+                self.model.encoder.save_weights(self.folder + "checkpoint" + f"{epoch:04d}.h5")
+                
+    callbacks = []
+    callbacks.append(SaveModelCallback(log_freq=10, folder=destination_folder))
+    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=destination_folder))
 
-    
-    
     # Create a MirroredStrategy.
     strategy = tf.distribute.MirroredStrategy()
     print('Number of devices: {}'.format(strategy.num_replicas_in_sync))
 
-    callbacks = []
-    #callbacks.append(wandb.keras.WandbCallback(save_model=False))
-    callbacks.append(SaveModelCallback(log_freq=10, folder=destination_folder))
-    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=destination_folder))
-
-    # Open a strategy scope.
     with strategy.scope():
-    # Everything that creates variables should be under the strategy scope.
-    # In general this is only model construction & `compile()`.
-        from simclr import ContrastiveModel, get_augmenter, get_projection_head
-        from transforms import RandomColorAffine, RandomBlur, RandomCrop
 
         schedule = tf.keras.optimizers.schedules.InverseTimeDecay(
-            initial_learning_rate=1e-3 * args.batch_size / 128,
+            initial_learning_rate=1e-3 * args.batch_size / 128, # 1e-3 is the default learning rate
             decay_steps=dataset_size // args.batch_size, # decay on every epoch
             decay_rate=0.05,
             staircase=True)
@@ -133,6 +125,8 @@ if __name__ == "__main__":
         validation_data=None,
         callbacks=callbacks,
         )
+    
+    print("Training finished. Saving the model and history.")
     
     with open(destination_folder + "history.json", "w") as f:
         json.dump(history.history, f)
