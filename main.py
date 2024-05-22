@@ -8,7 +8,8 @@ import glob
 import json
 import tensorflow as tf
 from simclr import ContrastiveModel, get_projection_head
-from transforms import RandomColorAffine, RandomBlur, RandomCrop
+from transforms import RandomColorAffine, RandomBlur
+from random_crop_v2 import RandomCrop, random_crop_with_resize
 
 
 if __name__ == "__main__":
@@ -113,7 +114,7 @@ if __name__ == "__main__":
         augmenter = tf.keras.Sequential([
             tf.keras.Input(shape=args.input_shape),
             tf.keras.layers.RandomFlip("horizontal"),
-            RandomCrop(height=args.input_shape[0], width=args.input_shape[1], min_area=min_area),
+            RandomCrop(height=args.input_shape[0], width=args.input_shape[1]),
             RandomColorAffine(brightness=0.6, jitter=0.2),
             RandomBlur(p=0.5, kernel_size=9),
         ])
