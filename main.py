@@ -75,8 +75,21 @@ if __name__ == "__main__":
             
         def on_epoch_end(self, epoch, logs=None):
             if epoch % self.log_freq == 0:
-                self.model.encoder.save_weights(self.folder + "checkpoint" + f"{epoch:04d}.h5")
-                
+                self.model.encoder.save_weights(self.folder + "checkpoint" + f"{epoch:04d}.h5")            
+    
+    class SaveLearningRate(tf.keras.callbacks.Callback):
+        def __init__(self, folder):
+            super(SaveLearningRate, self).__init__()
+            
+            self.folder = folder
+            self.learning_rates = []
+            
+        def on_epoch_end(self, epoch, logs=None):
+            self.learning_rates.append(self.model.optimizer.learning_rate.numpy())
+            
+            with open(self.folder + "learning_rates.json", "w") as f:
+                json.dump(self.learning_rates, f)
+    
     callbacks = []
     callbacks.append(SaveModelCallback(log_freq=10, folder=destination_folder))
     callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=destination_folder))
